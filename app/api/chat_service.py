@@ -221,34 +221,71 @@ def get_chat_response(messages, excel_file, language='en', user_question=None):
 
 def transcribe_audio(audio_file_path, language='en'):
     """Transcribe audio using OpenAI Whisper"""
+    current_app.logger.info(f"[TRANSCRIBE] Starting audio transcription for file: {audio_file_path}")
+    current_app.logger.info(f"[TRANSCRIBE] Language: {language}")
+    
+    # Check if the file exists and is readable
+    if not os.path.exists(audio_file_path):
+        current_app.logger.error(f"[TRANSCRIBE] Audio file does not exist: {audio_file_path}")
+        return None, _("Audio file not found")
+        
+    try:
+        file_size = os.path.getsize(audio_file_path)
+        current_app.logger.info(f"[TRANSCRIBE] Audio file size: {file_size} bytes")
+    except Exception as e:
+        current_app.logger.warning(f"[TRANSCRIBE] Error getting file size: {str(e)}")
+    
+    # Test if we can open and read the file
+    try:
+        with open(audio_file_path, 'rb') as test_file:
+            sample = test_file.read(1024)
+            current_app.logger.info(f"[TRANSCRIBE] Successfully read {len(sample)} bytes from file")
+    except Exception as e:
+        current_app.logger.error(f"[TRANSCRIBE] Cannot read audio file: {str(e)}")
+        return None, _("Cannot read audio file")
+    
     try:
         # Always use mock transcriptions for testing
+        current_app.logger.info("[TRANSCRIBE] Using mock transcription for development mode")
         mock_transcripts = {
             'en': "This is a mock transcription for development mode. Your audio was processed successfully.",
             'de': "Dies ist eine Mock-Transkription für den Entwicklungsmodus. Ihr Audio wurde erfolgreich verarbeitet.",
             'ru': "Это тестовая транскрипция для режима разработки. Ваш аудио был успешно обработан."
         }
-        return mock_transcripts.get(language, mock_transcripts['en']), None
+        transcript_text = mock_transcripts.get(language, mock_transcripts['en'])
+        current_app.logger.info(f"[TRANSCRIBE] Mock transcription: {transcript_text}")
+        return transcript_text, None
         
         # The following code will only run if we remove the return statement above
+        current_app.logger.info("[TRANSCRIBE] Getting OpenAI API key")
         openai.api_key = current_app.config['OPENAI_API_KEY']
         
         if not openai.api_key:
+            current_app.logger.error("[TRANSCRIBE] OpenAI API key not configured")
             return None, _("OpenAI API key not configured")
         
+        current_app.logger.info("[TRANSCRIBE] Opening audio file for transcription")
         with open(audio_file_path, 'rb') as audio_file:
+            current_app.logger.info("[TRANSCRIBE] Calling OpenAI Whisper API")
             transcript = openai.Audio.transcribe(
                 model="whisper-1",
                 file=audio_file,
                 language=language if language != 'en' else None
             )
+            current_app.logger.info("[TRANSCRIBE] OpenAI API call successful")
         
-        return transcript.text.strip(), None
+        transcript_text = transcript.text.strip()
+        current_app.logger.info(f"[TRANSCRIBE] Transcription result: {transcript_text[:100]}...")
+        return transcript_text, None
         
-    except openai.error.AuthenticationError:
+    except openai.error.AuthenticationError as e:
+        current_app.logger.error(f"[TRANSCRIBE] OpenAI authentication error: {str(e)}")
         return None, _("OpenAI API authentication failed")
-    except openai.error.RateLimitError:
+    except openai.error.RateLimitError as e:
+        current_app.logger.error(f"[TRANSCRIBE] OpenAI rate limit error: {str(e)}")
         return None, _("OpenAI API rate limit exceeded. Please try again later.")
     except Exception as e:
-        current_app.logger.error(f"Audio transcription error: {str(e)}")
+        current_app.logger.error(f"[TRANSCRIBE] Audio transcription error: {str(e)}")
+        import traceback
+        current_app.logger.error(f"[TRANSCRIBE] Traceback: {traceback.format_exc()}")
         return None, _("Error transcribing audio. Please try again.")

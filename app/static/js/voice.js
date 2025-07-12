@@ -10,13 +10,21 @@ let isRecording = false;
 
 // Debug logging function
 function logVoiceDebug(message) {
-    console.log(`[Voice Debug] ${message}`);
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(`[Voice Debug] ${logMessage}`);
+    
     // Also send logs to server for debugging
     try {
         fetch('/api/debug_log', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'voice_js', message: message })
+            body: JSON.stringify({ 
+                source: 'voice_js', 
+                message: logMessage,
+                userAgent: navigator.userAgent,
+                timestamp: timestamp
+            })
         }).catch(e => console.error('Failed to send debug log:', e));
     } catch (e) {
         console.error('Error sending debug log:', e);
@@ -356,16 +364,31 @@ function sendAudioToServer() {
     const language = document.documentElement.lang || 'en';
     
     logVoiceDebug(`Session ID: ${sessionId}, Language: ${language}`);
-    logVoiceDebug(`Audio chunks: ${audioChunks.length}`);
+    logVoiceDebug(`Audio chunks: ${audioChunks.length}, Types: ${audioChunks.map(chunk => chunk.type).join(', ')}`);
+    logVoiceDebug(`Browser info: ${navigator.userAgent}`);
     
     // Create audio blob
     try {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        logVoiceDebug(`Audio blob created, size: ${audioBlob.size} bytes`);
+        // Log audio chunks details
+        audioChunks.forEach((chunk, index) => {
+            logVoiceDebug(`Audio chunk ${index} type: ${chunk.type}, size: ${chunk.size} bytes`);
+        });
+        
+        // Try to use codec from the first chunk if available
+        let mimeType = 'audio/webm';
+        if (audioChunks.length > 0 && audioChunks[0].type) {
+            mimeType = audioChunks[0].type;
+            logVoiceDebug(`Using mime type from first chunk: ${mimeType}`);
+        } else {
+            logVoiceDebug(`Using default mime type: ${mimeType}`);
+        }
+        
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
+        logVoiceDebug(`Audio blob created, size: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
         
         // Check if audio is too short
         if (audioBlob.size < 1000) {
-            logVoiceDebug('Audio too short, ignoring');
+            logVoiceDebug(`Audio too short (${audioBlob.size} bytes), ignoring`);
             showToast('Запись слишком короткая', 'warning');
             return;
         }
@@ -376,26 +399,45 @@ function sendAudioToServer() {
         
         // Create form data
         const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.webm');
+        
+        // Add a random filename with correct extension based on mime type
+        let extension = 'webm';
+        if (mimeType.includes('ogg')) extension = 'ogg';
+        else if (mimeType.includes('mp3')) extension = 'mp3';
+        else if (mimeType.includes('wav')) extension = 'wav';
+        
+        const randomFilename = `recording_${Date.now()}.${extension}`;
+        logVoiceDebug(`Generated random filename: ${randomFilename}`);
+        
+        formData.append('audio', audioBlob, randomFilename);
         formData.append('session_id', sessionId);
         formData.append('language', language);
         
-        logVoiceDebug('FormData created');
+        logVoiceDebug(`FormData created with filename: ${randomFilename}`);
         logVoiceDebug(`Sending audio to server with session ID: ${sessionId}`);
         
         // Send audio to server
+        logVoiceDebug('Starting fetch request to /api/send_voice_message');
         fetch('/api/send_voice_message', {
             method: 'POST',
             body: formData
         })
         .then(response => {
-            logVoiceDebug(`Server response status: ${response.status}`);
-            return response.json();
+            logVoiceDebug(`Server response status: ${response.status} ${response.statusText}`);
+            logVoiceDebug(`Response headers: ${JSON.stringify(Object.fromEntries([...response.headers]))}`);
+            if (!response.ok) {
+                logVoiceDebug(`Server returned error status: ${response.status}`);
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json().catch(e => {
+                logVoiceDebug(`Error parsing JSON from response: ${e.message}`);
+                throw new Error('Invalid JSON in response');
+            });
         })
         .then(data => {
             // Hide loading indicator
             hideLoadingIndicator();
-            logVoiceDebug(`Server response data: ${JSON.stringify(data)}`);
+            logVoiceDebug(`Server response data received: ${JSON.stringify(data)}`);
             
             if (data.error) {
                 logVoiceDebug(`Error from server: ${data.error}`);
@@ -403,24 +445,37 @@ function sendAudioToServer() {
                 return;
             }
             
+            if (!data.transcript && !data.success) {
+                logVoiceDebug('No transcript or success field in response');
+                showToast('Сервер не вернул транскрипцию', 'danger');
+                return;
+            }
+            
             // Add user message to chat
-            logVoiceDebug(`Transcript: ${data.transcript}`);
-            addMessageToChat(data.transcript, true, true);
+            const transcript = data.transcript || '';
+            logVoiceDebug(`Transcript received: ${transcript}`);
+            addMessageToChat(transcript, true, true);
             
             // Add assistant response to chat
             if (data.response) {
-                logVoiceDebug(`Response: ${data.response}`);
+                logVoiceDebug(`Response received (first 100 chars): ${data.response.substring(0, 100)}...`);
                 addMessageToChat(data.response, false, false);
+            } else {
+                logVoiceDebug('No response field in server data');
             }
             
             // Scroll to bottom
             scrollChatToBottom();
+            logVoiceDebug('Voice message processing completed successfully');
         })
         .catch(error => {
             logVoiceDebug(`Fetch error: ${error.message}`);
+            if (error.stack) {
+                logVoiceDebug(`Error stack: ${error.stack}`);
+            }
             hideLoadingIndicator();
             console.error('Error sending audio:', error);
-            showToast('Ошибка отправки аудио', 'danger');
+            showToast(`Ошибка отправки аудио: ${error.message}`, 'danger');
         });
     } catch (error) {
         logVoiceDebug(`Error creating or sending audio blob: ${error.message}`);

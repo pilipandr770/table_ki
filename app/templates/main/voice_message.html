@@ -19,6 +19,13 @@
                         </ol>
                     </div>
                     
+                    <!-- Diagnostic information -->
+                    <div class="alert alert-light border small">
+                        <h6>{{ _('Diagnostic Information') }}</h6>
+                        <div id="browser-info"></div>
+                        <div id="audio-support"></div>
+                    </div>
+                    
                     <div id="mic-status" class="alert alert-secondary text-center">
                         {{ _('Waiting for microphone permission...') }}
                     </div>
@@ -74,6 +81,19 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- Debug Log -->
+                    <div class="mt-4">
+                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#debugLogCollapse">
+                            {{ _('Show Debug Log') }}
+                        </a>
+                        <div class="collapse mt-2" id="debugLogCollapse">
+                            <div class="card card-body bg-light">
+                                <small class="text-muted">{{ _('Debug log:') }}</small>
+                                <pre id="debug-log" class="small text-muted" style="max-height: 200px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,15 +137,32 @@ function updateRecordingTime() {
 
 // Request permission for microphone
 function requestMicrophonePermission() {
-    console.log('Requesting microphone permission');
-    document.getElementById('mic-status').className = 'alert alert-info text-center';
-    document.getElementById('mic-status').innerText = "{{ _('Requesting microphone access...') }}";
+    logDebug('Requesting microphone permission');
     
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    const micStatus = document.getElementById('mic-status');
+    micStatus.className = 'alert alert-info text-center';
+    micStatus.innerText = "{{ _('Requesting microphone access...') }}";
+    
+    // Log audio constraints
+    const constraints = { audio: true };
+    logDebug(`Using audio constraints: ${JSON.stringify(constraints)}`);
+    
+    navigator.mediaDevices.getUserMedia(constraints)
         .then(stream => {
-            console.log('Microphone permission granted');
-            document.getElementById('mic-status').className = 'alert alert-success text-center';
-            document.getElementById('mic-status').innerText = "{{ _('Microphone access granted!') }}";
+            logDebug('Microphone permission granted');
+            
+            // Log stream information
+            const audioTracks = stream.getAudioTracks();
+            logDebug(`Audio tracks: ${audioTracks.length}`);
+            
+            audioTracks.forEach((track, index) => {
+                logDebug(`Audio track ${index}: ID=${track.id}, Kind=${track.kind}, Label=${track.label}`);
+                logDebug(`Track settings: ${JSON.stringify(track.getSettings())}`);
+                logDebug(`Track constraints: ${JSON.stringify(track.getConstraints())}`);
+            });
+            
+            micStatus.className = 'alert alert-success text-center';
+            micStatus.innerText = "{{ _('Microphone access granted!') }}";
             
             // Hide permission button, show recording controls
             document.getElementById('request-permission').classList.add('d-none');
@@ -133,44 +170,104 @@ function requestMicrophonePermission() {
             
             // Store the stream for later use
             window.microphoneStream = stream;
+            logDebug('Microphone stream stored for later use');
         })
         .catch(error => {
-            console.error('Error accessing microphone:', error);
-            document.getElementById('mic-status').className = 'alert alert-danger text-center';
-            document.getElementById('mic-status').innerText = "{{ _('Microphone access denied or not available.') }}";
+            logDebug(`Error accessing microphone: ${error.name} - ${error.message}`);
+            if (error.name === 'NotAllowedError') {
+                logDebug('User denied microphone permission');
+            } else if (error.name === 'NotFoundError') {
+                logDebug('No microphone found on this device');
+            } else if (error.name === 'NotReadableError') {
+                logDebug('Microphone is already in use by another application');
+            }
+            
+            micStatus.className = 'alert alert-danger text-center';
+            micStatus.innerText = "{{ _('Microphone access denied or not available.') }}";
         });
 }
 
 // Start recording
 function startRecording() {
     if (!window.microphoneStream) {
-        console.error('No microphone stream available');
+        logDebug('No microphone stream available');
         return;
     }
     
-    console.log('Starting recording');
+    logDebug('Starting recording');
     audioChunks = [];
     
     // Update UI
     document.getElementById('start-record').classList.add('d-none');
     document.getElementById('stop-record').classList.remove('d-none');
     document.getElementById('mic-status').innerText = "{{ _('Recording...') }}";
+    document.getElementById('mic-status').className = 'alert alert-danger text-center';
     
     // Start timer
     startRecordingTimer();
     
-    // Create media recorder
+    // Create media recorder with options
     try {
-        mediaRecorder = new MediaRecorder(window.microphoneStream);
+        // Get available MIME types
+        const mimeTypes = [
+            'audio/webm',
+            'audio/webm;codecs=opus',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+            'audio/mpeg'
+        ];
+        
+        // Find supported MIME type
+        let selectedMimeType = null;
+        for (const type of mimeTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                selectedMimeType = type;
+                logDebug(`Found supported MIME type: ${selectedMimeType}`);
+                break;
+            } else {
+                logDebug(`MIME type not supported: ${type}`);
+            }
+        }
+        
+        if (!selectedMimeType) {
+            selectedMimeType = '';  // Use browser's default
+            logDebug('No supported MIME type found, using browser default');
+        }
+        
+        // Create recorder with options
+        const options = { 
+            mimeType: selectedMimeType,
+            audioBitsPerSecond: 128000  // 128 kbps
+        };
+        
+        logDebug(`Creating MediaRecorder with options: ${JSON.stringify(options)}`);
+        mediaRecorder = new MediaRecorder(window.microphoneStream, options);
+        
+        // Log MediaRecorder state
+        logDebug(`Initial state: ${mediaRecorder.state}`);
+        logDebug(`Selected MIME type: ${mediaRecorder.mimeType}`);
         
         mediaRecorder.addEventListener('dataavailable', event => {
+            logDebug(`Data available event: size=${event.data.size}, type=${event.data.type}`);
             audioChunks.push(event.data);
         });
         
-        mediaRecorder.start();
-        console.log('Recording started');
+        mediaRecorder.addEventListener('start', () => {
+            logDebug('MediaRecorder started event fired');
+        });
+        
+        mediaRecorder.addEventListener('error', error => {
+            logDebug(`MediaRecorder error: ${error}`);
+        });
+        
+        // Start recording with 1 second chunks
+        mediaRecorder.start(1000);
+        logDebug(`Recording started, state: ${mediaRecorder.state}`);
     } catch (error) {
-        console.error('Error starting recording:', error);
+        logDebug(`Error starting recording: ${error.name} - ${error.message}`);
+        if (error.stack) {
+            logDebug(`Error stack: ${error.stack}`);
+        }
         document.getElementById('mic-status').className = 'alert alert-danger text-center';
         document.getElementById('mic-status').innerText = "{{ _('Error starting recording.') }}";
     }
@@ -179,37 +276,85 @@ function startRecording() {
 // Stop recording
 function stopRecording() {
     if (!mediaRecorder) {
-        console.error('No media recorder available');
+        logDebug('No media recorder available');
         return;
     }
     
-    console.log('Stopping recording');
+    logDebug(`Stopping recording, current state: ${mediaRecorder.state}`);
+    logDebug(`Current audio chunks: ${audioChunks.length}`);
     
     // Update UI
     document.getElementById('recording-controls').classList.add('d-none');
     document.getElementById('processing').classList.remove('d-none');
     document.getElementById('mic-status').innerText = "{{ _('Processing recording...') }}";
+    document.getElementById('mic-status').className = 'alert alert-info text-center';
     
     // Stop timer
     stopRecordingTimer();
+    logDebug(`Recording duration: ${recordingSeconds} seconds`);
     
-    // Stop recorder
-    mediaRecorder.addEventListener('stop', () => {
-        sendAudioToServer();
-    });
-    
-    mediaRecorder.stop();
+    // Add stop event listener
+    try {
+        // Make sure we only add the listener once
+        const onStopHandler = () => {
+            logDebug('MediaRecorder stop event fired');
+            logDebug(`Final audio chunks: ${audioChunks.length}`);
+            
+            // Log each chunk
+            audioChunks.forEach((chunk, index) => {
+                logDebug(`Chunk ${index}: size=${chunk.size}, type=${chunk.type}`);
+            });
+            
+            sendAudioToServer();
+        };
+        
+        // Remove existing listeners to avoid duplicates
+        mediaRecorder.removeEventListener('stop', onStopHandler);
+        mediaRecorder.addEventListener('stop', onStopHandler);
+        
+        // Stop the recorder
+        logDebug('Calling mediaRecorder.stop()');
+        mediaRecorder.stop();
+        logDebug(`After stop() call, state: ${mediaRecorder.state}`);
+        
+        // Also stop the microphone tracks
+        if (window.microphoneStream) {
+            const tracks = window.microphoneStream.getTracks();
+            tracks.forEach(track => {
+                logDebug(`Stopping track: ${track.label}`);
+                track.stop();
+            });
+            logDebug('All microphone tracks stopped');
+        }
+    } catch (error) {
+        logDebug(`Error stopping recording: ${error.name} - ${error.message}`);
+        if (error.stack) {
+            logDebug(`Error stack: ${error.stack}`);
+        }
+        document.getElementById('mic-status').className = 'alert alert-danger text-center';
+        document.getElementById('mic-status').innerText = "{{ _('Error stopping recording.') }}";
+    }
 }
 
 // Send audio to server
 function sendAudioToServer() {
-    console.log('Sending audio to server');
+    logDebug('Sending audio to server');
     
-    // Create audio blob
-    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    // Try to determine best MIME type based on available chunks
+    let mimeType = 'audio/webm';
+    if (audioChunks.length > 0 && audioChunks[0].type) {
+        mimeType = audioChunks[0].type;
+        logDebug(`Using MIME type from first chunk: ${mimeType}`);
+    }
+    
+    // Create audio blob with MIME type
+    logDebug(`Creating Blob with type ${mimeType} from ${audioChunks.length} chunks`);
+    const audioBlob = new Blob(audioChunks, { type: mimeType });
+    logDebug(`Audio blob created: size=${audioBlob.size} bytes, type=${audioBlob.type}`);
     
     // Check if audio is too short
     if (audioBlob.size < 1000) {
+        logDebug(`Audio too short: ${audioBlob.size} bytes`);
         document.getElementById('mic-status').className = 'alert alert-warning text-center';
         document.getElementById('mic-status').innerText = "{{ _('Recording too short.') }}";
         resetUI();
@@ -217,21 +362,58 @@ function sendAudioToServer() {
     }
     
     // Create form data
+    logDebug('Creating FormData object');
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.webm');
+    
+    // Determine file extension based on MIME type
+    let fileExtension = 'webm';
+    if (mimeType.includes('ogg')) fileExtension = 'ogg';
+    else if (mimeType.includes('mp3')) fileExtension = 'mp3';
+    else if (mimeType.includes('wav')) fileExtension = 'wav';
+    
+    const filename = `recording_${Date.now()}.${fileExtension}`;
+    logDebug(`Generated filename: ${filename}`);
+    
+    // Add form data
+    formData.append('audio', audioBlob, filename);
     formData.append('session_id', sessionId);
-    formData.append('language', document.documentElement.lang || 'en');
+    const language = document.documentElement.lang || 'en';
+    formData.append('language', language);
+    
+    logDebug(`Form data prepared with session_id=${sessionId}, language=${language}`);
+    
+    // Log request preparation
+    logDebug('Preparing fetch request to /api/send_voice_message');
     
     // Send to server
     fetch('/api/send_voice_message', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        logDebug(`Server response received. Status: ${response.status} ${response.statusText}`);
+        
+        // Log response headers
+        const headers = {};
+        response.headers.forEach((value, key) => {
+            headers[key] = value;
+        });
+        logDebug(`Response headers: ${JSON.stringify(headers)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Server responded with status ${response.status}`);
+        }
+        
+        return response.json().catch(e => {
+            logDebug(`Error parsing JSON response: ${e.message}`);
+            throw new Error('Invalid JSON in response');
+        });
+    })
     .then(data => {
-        console.log('Server response:', data);
+        logDebug(`Server response data: ${JSON.stringify(data)}`);
         
         if (data.error) {
+            logDebug(`Error from server: ${data.error}`);
             document.getElementById('mic-status').className = 'alert alert-danger text-center';
             document.getElementById('mic-status').innerText = data.error;
             resetUI();
@@ -245,13 +427,25 @@ function sendAudioToServer() {
         document.getElementById('mic-status').innerText = "{{ _('Voice message processed successfully!') }}";
         
         // Display transcript and response
-        document.getElementById('transcript-text').innerText = data.transcript || '';
-        document.getElementById('response-text').innerText = data.response || '';
+        const transcript = data.transcript || '';
+        const response = data.response || '';
+        
+        logDebug(`Transcript: ${transcript}`);
+        logDebug(`Response (first 100 chars): ${response.substring(0, 100)}...`);
+        
+        document.getElementById('transcript-text').innerText = transcript;
+        document.getElementById('response-text').innerText = response;
+        
+        logDebug('Voice message processed successfully');
     })
     .catch(error => {
-        console.error('Error sending audio:', error);
+        logDebug(`Error in fetch: ${error.message}`);
+        if (error.stack) {
+            logDebug(`Error stack: ${error.stack}`);
+        }
+        
         document.getElementById('mic-status').className = 'alert alert-danger text-center';
-        document.getElementById('mic-status').innerText = "{{ _('Error sending voice message.') }}";
+        document.getElementById('mic-status').innerText = `{{ _('Error sending voice message:') }} ${error.message}`;
         resetUI();
     });
 }
@@ -265,18 +459,93 @@ function resetUI() {
     document.getElementById('recording-timer').innerText = '00:00';
 }
 
+// Debug log function
+function logDebug(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logElement = document.getElementById('debug-log');
+    
+    if (logElement) {
+        // Add to UI log
+        logElement.innerHTML += `[${timestamp}] ${message}\n`;
+        // Auto-scroll to bottom
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // Log to console
+    console.log(`[Voice Debug] ${message}`);
+    
+    // Also send to server
+    try {
+        fetch('/api/debug_log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                source: 'voice_message_html', 
+                message: message,
+                userAgent: navigator.userAgent
+            })
+        }).catch(e => console.error('Failed to send debug log:', e));
+    } catch (e) {
+        console.error('Error sending debug log:', e);
+    }
+}
+
+// Add browser diagnostic information
+function addBrowserDiagnostics() {
+    const browserInfoElement = document.getElementById('browser-info');
+    const audioSupportElement = document.getElementById('audio-support');
+    
+    if (browserInfoElement) {
+        const browserInfo = `
+            <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+            <p><strong>Platform:</strong> ${navigator.platform}</p>
+            <p><strong>App Version:</strong> ${navigator.appVersion}</p>
+        `;
+        browserInfoElement.innerHTML = browserInfo;
+    }
+    
+    if (audioSupportElement) {
+        const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        const hasAudioContext = 'AudioContext' in window || 'webkitAudioContext' in window;
+        
+        const supportInfo = `
+            <p><strong>MediaDevices API:</strong> ${hasMediaDevices ? '✅ Supported' : '❌ Not supported'}</p>
+            <p><strong>AudioContext API:</strong> ${hasAudioContext ? '✅ Supported' : '❌ Not supported'}</p>
+            <p><strong>Secure Context:</strong> ${window.isSecureContext ? '✅ Yes' : '❌ No'}</p>
+        `;
+        audioSupportElement.innerHTML = supportInfo;
+    }
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
+    // Add diagnostic information
+    addBrowserDiagnostics();
+    logDebug('Page loaded');
+    logDebug(`Session ID: ${sessionId}`);
+    
     // Add event listeners
-    document.getElementById('request-permission').addEventListener('click', requestMicrophonePermission);
-    document.getElementById('start-record').addEventListener('click', startRecording);
-    document.getElementById('stop-record').addEventListener('click', stopRecording);
+    document.getElementById('request-permission').addEventListener('click', function() {
+        logDebug('Request permission button clicked');
+        requestMicrophonePermission();
+    });
+    
+    document.getElementById('start-record').addEventListener('click', function() {
+        logDebug('Start record button clicked');
+        startRecording();
+    });
+    
+    document.getElementById('stop-record').addEventListener('click', function() {
+        logDebug('Stop record button clicked');
+        stopRecording();
+    });
     
     // Return to chat button
     const returnButton = document.getElementById('return-to-chat');
     if (returnButton) {
         returnButton.addEventListener('click', function() {
             const chatId = this.getAttribute('data-session-id');
+            logDebug(`Returning to chat: ${chatId}`);
             window.location.href = `/chat/${chatId}`;
         });
     }
@@ -285,6 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newRecordingButton = document.getElementById('new-recording');
     if (newRecordingButton) {
         newRecordingButton.addEventListener('click', function() {
+            logDebug('New recording button clicked');
             document.getElementById('results-section').classList.add('d-none');
             resetUI();
         });

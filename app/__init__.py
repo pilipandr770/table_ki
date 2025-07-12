@@ -82,6 +82,9 @@ def create_app(config_name=None):
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
     
+    from app.audio_test import bp as audio_test_bp
+    app.register_blueprint(audio_test_bp, url_prefix='/audio-test')
+    
     # Register CLI commands
     from app import cli
     cli.init_app(app)
