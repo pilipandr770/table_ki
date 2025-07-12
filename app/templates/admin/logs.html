@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ _('System Logs') }}</h4>
+                    <div class="btn-group">
+                        <a href="{{ url_for('admin.logs', log_type='error') }}" class="btn btn-sm btn-danger {% if log_type == 'error' %}active{% endif %}">
+                            {{ _('Errors') }}
+                        </a>
+                        <a href="{{ url_for('admin.logs', log_type='warning') }}" class="btn btn-sm btn-warning {% if log_type == 'warning' %}active{% endif %}">
+                            {{ _('Warnings') }}
+                        </a>
+                        <a href="{{ url_for('admin.logs', log_type='info') }}" class="btn btn-sm btn-info {% if log_type == 'info' %}active{% endif %}">
+                            {{ _('Info') }}
+                        </a>
+                        <a href="{{ url_for('admin.logs') }}" class="btn btn-sm btn-light {% if not log_type %}active{% endif %}">
+                            {{ _('All') }}
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ _('This is a placeholder for the system logs feature. In a production environment, this would display actual log entries from the application.') }}
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ _('Timestamp') }}</th>
+                                    <th>{{ _('Level') }}</th>
+                                    <th>{{ _('Module') }}</th>
+                                    <th>{{ _('Message') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>2025-07-11 14:23:45</td>
+                                    <td><span class="badge bg-success">INFO</span></td>
+                                    <td>auth.routes</td>
+                                    <td>User login successful: admin@example.com</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-07-11 14:22:30</td>
+                                    <td><span class="badge bg-warning">WARNING</span></td>
+                                    <td>main.utils</td>
+                                    <td>Slow database query detected: SELECT * FROM users WHERE email LIKE '%example%'</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-07-11 14:20:15</td>
+                                    <td><span class="badge bg-danger">ERROR</span></td>
+                                    <td>api.chat_service</td>
+                                    <td>Failed to connect to OpenAI API: Connection timeout</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-07-11 14:18:05</td>
+                                    <td><span class="badge bg-info">DEBUG</span></td>
+                                    <td>app</td>
+                                    <td>Application started in development mode</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-07-11 14:15:22</td>
+                                    <td><span class="badge bg-success">INFO</span></td>
+                                    <td>admin.routes</td>
+                                    <td>Admin user accessed system settings page</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <nav aria-label="Log pagination">
+                        <ul class="pagination justify-content-center mt-4">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">{{ _('Previous') }}</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">{{ _('Next') }}</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-warning">
+                            <i class="fas fa-download me-1"></i> {{ _('Export Logs') }}
+                        </button>
+                        <button class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> {{ _('Clear Logs') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

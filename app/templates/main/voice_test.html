@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" data-session-id="6">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>Тестирование голосового ввода</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Эта страница предназначена для тестирования функции голосового ввода.</p>
+                    
+                    <div class="alert alert-info">
+                        <p><strong>Инструкции:</strong></p>
+                        <ol>
+                            <li>Нажмите на кнопку "Запись голоса" ниже</li>
+                            <li>Разрешите доступ к микрофону, если браузер спросит</li>
+                            <li>Говорите в микрофон</li>
+                            <li>Нажмите "Остановить запись", когда закончите</li>
+                            <li>Результат обработки появится в разделе "Результаты"</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="d-grid gap-2 col-md-6 mx-auto my-4">
+                        <button id="voice-test-button" class="btn btn-lg btn-primary">
+                            <i class="fas fa-microphone me-2"></i> Запись голоса
+                        </button>
+                    </div>
+                    
+                    <div id="status-container" class="alert alert-secondary text-center my-3">
+                        Готово к записи
+                    </div>
+                    
+                    <h5 class="mt-4">Результаты:</h5>
+                    <div id="results-container" class="border rounded p-3 bg-light">
+                        <p class="text-muted text-center">Здесь появятся результаты обработки голосового сообщения</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5>Журнал отладки</h5>
+                </div>
+                <div class="card-body">
+                    <div id="debug-log" class="bg-dark text-light p-3" style="height: 200px; overflow-y: auto; font-family: monospace;">
+                        <!-- Debug logs will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Voice Recording Modal -->
+<div class="modal fade" id="voice-modal" tabindex="-1" aria-labelledby="voiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="voiceModalLabel">Голосовое сообщение</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="voice-status" class="mb-3">Нажмите кнопку для начала записи</div>
+                <div id="recording-time" class="display-4 mb-3">00:00</div>
+                <div id="recording-animation" class="mb-3 d-none">
+                    <div class="spinner-grow text-danger" role="status">
+                        <span class="visually-hidden">Запись...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" id="start-recording" class="btn btn-primary">
+                    <i class="fas fa-microphone"></i> Начать запись
+                </button>
+                <button type="button" id="stop-recording" class="btn btn-danger d-none">
+                    <i class="fas fa-stop"></i> Остановить запись
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Voice recording functionality -->
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+
+<script>
+// Debug log display function
+function displayDebugLog(message) {
+    const logElement = document.getElementById('debug-log');
+    if (logElement) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+        logElement.appendChild(logEntry);
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+}
+
+// Override the logVoiceDebug function to also display in UI
+const originalLogVoiceDebug = window.logVoiceDebug || function() {};
+window.logVoiceDebug = function(message) {
+    originalLogVoiceDebug(message);
+    displayDebugLog(message);
+};
+
+// Initialize test page
+document.addEventListener('DOMContentLoaded', function() {
+    displayDebugLog('Voice test page loaded');
+    
+    // Override the addMessageToChat function
+    window.addMessageToChat = function(content, isUser, isVoice) {
+        displayDebugLog(`Message added: ${isUser ? 'User' : 'Assistant'} - ${isVoice ? 'Voice' : 'Text'}`);
+        
+        const resultsContainer = document.getElementById('results-container');
+        if (resultsContainer) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `p-2 my-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-light'}`;
+            
+            let header = '';
+            if (isUser && isVoice) {
+                header = '<div class="small mb-1"><i class="fas fa-microphone me-1"></i>Голосовое сообщение</div>';
+            } else if (isUser) {
+                header = '<div class="small mb-1"><i class="fas fa-user me-1"></i>Пользователь</div>';
+            } else {
+                header = '<div class="small mb-1"><i class="fas fa-robot me-1"></i>Ассистент</div>';
+            }
+            
+            messageElement.innerHTML = `${header}${content}`;
+            resultsContainer.innerHTML = ''; // Clear previous results
+            resultsContainer.appendChild(messageElement);
+        }
+    };
+    
+    // Override the showLoadingIndicator function
+    window.showLoadingIndicator = function() {
+        displayDebugLog('Loading indicator shown');
+        const statusContainer = document.getElementById('status-container');
+        if (statusContainer) {
+            statusContainer.className = 'alert alert-info text-center my-3';
+            statusContainer.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Обработка голосового сообщения...</p>
+            `;
+        }
+    };
+    
+    // Override the hideLoadingIndicator function
+    window.hideLoadingIndicator = function() {
+        displayDebugLog('Loading indicator hidden');
+        const statusContainer = document.getElementById('status-container');
+        if (statusContainer) {
+            statusContainer.className = 'alert alert-secondary text-center my-3';
+            statusContainer.textContent = 'Готово к записи';
+        }
+    };
+    
+    // Connect the voice test button
+    const voiceTestButton = document.getElementById('voice-test-button');
+    if (voiceTestButton) {
+        voiceTestButton.addEventListener('click', function() {
+            displayDebugLog('Voice test button clicked');
+            showVoiceModal();
+        });
+    }
+    
+    displayDebugLog('Initialization complete');
+});
+</script>
+{% endblock %}

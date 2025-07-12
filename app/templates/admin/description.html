@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{{ _('System Description') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5>{{ _('About Excel Chat Assistant') }}</h5>
+                            <p class="mb-4">
+                                Excel Chat Assistant - это платформа для анализа и работы с данными Excel при помощи 
+                                искусственного интеллекта. Система позволяет загружать Excel-файлы, задавать вопросы 
+                                о данных и получать инсайты в формате диалога.
+                            </p>
+                            
+                            <h5>{{ _('Key Features') }}</h5>
+                            <ul class="mb-4">
+                                <li>Загрузка и управление Excel-файлами</li>
+                                <li>Чат-интерфейс для взаимодействия с данными</li>
+                                <li>Три режима доступа: чтение, чтение/запись, полный доступ</li>
+                                <li>Многоязычный интерфейс (английский, немецкий, русский)</li>
+                                <li>Управление пользователями и подписками</li>
+                                <li>Аналитика использования системы</li>
+                            </ul>
+                            
+                            <h5>{{ _('Permission Modes') }}</h5>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>{{ _('Mode') }}</th>
+                                            <th>{{ _('Description') }}</th>
+                                            <th>{{ _('Capabilities') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge bg-secondary">{{ _('READ') }}</span></td>
+                                            <td>{{ _('Read-only access') }}</td>
+                                            <td>{{ _('View and analyze data, but not modify') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-primary">{{ _('READ_WRITE') }}</span></td>
+                                            <td>{{ _('Read-write access') }}</td>
+                                            <td>{{ _('View, analyze, update cells, add new rows') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge bg-success">{{ _('READ_WRITE_DELETE') }}</span></td>
+                                            <td>{{ _('Full access') }}</td>
+                                            <td>{{ _('View, analyze, update cells, add and delete rows') }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h5>{{ _('Administrator Guide') }}</h5>
+                            <p class="mb-3">{{ _('As an administrator, you have access to the following functions:') }}</p>
+                            <ul class="mb-4">
+                                <li>{{ _('User Management - approve users, update roles, view user details') }}</li>
+                                <li>{{ _('Subscription Management - view and edit subscription details') }}</li>
+                                <li>{{ _('File Management - view all files in the system') }}</li>
+                                <li>{{ _('Analytics - view usage statistics and trends') }}</li>
+                            </ul>
+                            
+                            <h5>{{ _('Technical Information') }}</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">{{ _('Frontend') }}</div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">Bootstrap 5</li>
+                                            <li class="list-group-item">JavaScript (ES6)</li>
+                                            <li class="list-group-item">Font Awesome Icons</li>
+                                            <li class="list-group-item">Chart.js для визуализации</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">{{ _('Backend') }}</div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">Python + Flask</li>
+                                            <li class="list-group-item">SQLAlchemy ORM</li>
+                                            <li class="list-group-item">Pandas для работы с Excel</li>
+                                            <li class="list-group-item">OpenAI API для AI функций</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h5>{{ _('System Requirements') }}</h5>
+                            <ul class="mb-4">
+                                <li>{{ _('Modern web browser (Chrome, Firefox, Edge, Safari)') }}</li>
+                                <li>{{ _('Internet connection') }}</li>
+                                <li>{{ _('Excel files (.xlsx, .xls)') }}</li>
+                            </ul>
+                            
+                            <div class="alert alert-info">
+                                {{ _('For technical support or further questions, please contact the system administrator.') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Дополнительные скрипты здесь, если необходимо -->
+{% endblock %}

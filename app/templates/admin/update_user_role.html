@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{{ _('Update User Role') }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            <label for="role" class="form-label">{{ _('Role') }}</label>
+                            {{ form.role(class="form-select") }}
+                        </div>
+                        <button type="submit" class="btn btn-success">{{ _('Update Role') }}</button>
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

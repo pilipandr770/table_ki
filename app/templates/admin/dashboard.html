@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>{{ _('Admin Dashboard') }}</h1>
+                <div class="badge bg-primary">{{ _('Administrator') }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ total_users }}</h3>
+                            <p class="mb-0">{{ _('Total Users') }}</p>
+                        </div>
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ pending_approvals }}</h3>
+                            <p class="mb-0">{{ _('Pending Approvals') }}</p>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ active_subscriptions }}</h3>
+                            <p class="mb-0">{{ _('Active Subscriptions') }}</p>
+                        </div>
+                        <i class="fas fa-credit-card fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ total_files }}</h3>
+                            <p class="mb-0">{{ _('Total Files') }}</p>
+                        </div>
+                        <i class="fas fa-file-excel fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Pending Approvals -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ _('Pending User Approvals') }}</h5>
+                    <a href="{{ url_for('admin.users', approval='pending') }}" class="btn btn-sm btn-outline-warning">
+                        {{ _('View All') }}
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if pending_users %}
+                        <div class="list-group list-group-flush">
+                            {% for user in pending_users %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ user.get_full_name() }}</h6>
+                                        <small class="text-muted">{{ user.email }}</small><br>
+                                        <small class="text-muted">{{ _('Registered') }}: {{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-success approve-user-btn" 
+                                                data-user-id="{{ user.id }}" data-approve="true">
+                                            {{ _('Approve') }}
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger approve-user-btn" 
+                                                data-user-id="{{ user.id }}" data-approve="false">
+                                            {{ _('Reject') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                            <p class="text-muted">{{ _('No pending approvals') }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Users -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ _('Recent Registrations') }}</h5>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">
+                        {{ _('View All') }}
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_users %}
+                        <div class="list-group list-group-flush">
+                            {% for user in recent_users %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ user.get_full_name() }}</h6>
+                                        <small class="text-muted">{{ user.email }}</small><br>
+                                        <small class="text-muted">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-{{ 'success' if user.is_approved else 'warning' }}">
+                                            {{ _('Approved') if user.is_approved else _('Pending') }}
+                                        </span>
+                                        {% if user.subscription %}
+                                            <span class="badge bg-info">{{ user.subscription.plan_type.value }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">{{ _('No users registered yet') }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Statistics -->
+    {% if subscription_stats %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ _('Subscription Distribution') }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for plan_type, count in subscription_stats %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                                        <div>
+                                            <h6 class="mb-0">{{ plan_type.value.replace('-', ' ').title() }}</h6>
+                                            <small class="text-muted">{{ _('Active Subscriptions') }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <h4 class="mb-0">{{ count }}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ _('Quick Actions') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-users me-2"></i>{{ _('Manage Users') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.subscriptions') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-credit-card me-2"></i>{{ _('Subscriptions') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.files') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-file-excel me-2"></i>{{ _('File Management') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.analytics') }}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-chart-bar me-2"></i>{{ _('Analytics') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function approveUser(userId, approve) {
+    try {
+        const response = await fetch(`/admin/user/${userId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            body: JSON.stringify({ approve: approve })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Reload page to update the list
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to update user approval status');
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+    }
+}
+
+// Add event listeners for approval buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.approve-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const approve = this.dataset.approve === 'true';
+            approveUser(userId, approve);
+        });
+    });
+});
+
+// Auto-refresh dashboard every 60 seconds
+setTimeout(function() {
+    location.reload();
+}, 60000);
+</script>
+{% endblock %}

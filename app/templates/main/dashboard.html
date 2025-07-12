@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>{{ _('Dashboard') }}</h1>
+                <div>
+                    {% if can_upload %}
+                        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>{{ _('Upload File') }}
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('main.new_chat_session') }}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i>{{ _('New Chat') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3>{{ files|length }}</h3>
+                            <p class="mb-0">{{ _('Uploaded Files') }}</p>
+                        </div>
+                        <i class="fas fa-file-excel fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3>{{ recent_sessions|length }}</h3>
+                            <p class="mb-0">{{ _('Chat Sessions') }}</p>
+                        </div>
+                        <i class="fas fa-comments fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3>{{ remaining_uploads if can_upload else 0 }}</h3>
+                            <p class="mb-0">{{ _('Uploads Left') }}</p>
+                        </div>
+                        <i class="fas fa-cloud-upload-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3>{{ current_user.subscription.plan_type.value.replace('-', ' ').title() if current_user.subscription else 'None' }}</h3>
+                            <p class="mb-0">{{ _('Plan Type') }}</p>
+                        </div>
+                        <i class="fas fa-crown fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Files -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ _('Recent Files') }}</h5>
+                    <a href="{{ url_for('main.files') }}" class="btn btn-sm btn-outline-primary">{{ _('View All') }}</a>
+                </div>
+                <div class="card-body">
+                    {% if files %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>{{ _('File Name') }}</th>
+                                        <th>{{ _('Upload Date') }}</th>
+                                        <th>{{ _('Size') }}</th>
+                                        <th>{{ _('Permissions') }}</th>
+                                        <th>{{ _('Actions') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in files[:5] %}
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-file-excel text-success me-2"></i>
+                                                {{ file.original_filename }}
+                                            </td>
+                                            <td>{{ file.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>{{ file.get_file_size_mb() }} MB</td>
+                                            <td>
+                                                <span class="badge bg-{{ 'success' if file.permission_mode.value == 'read_write_delete' else 'warning' if file.permission_mode.value == 'read_write' else 'secondary' }}">
+                                                    {{ file.permission_mode.value.replace('_', ' ').title() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('main.view_file', file_id=file.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    {{ _('View') }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-excel fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">{{ _('No files uploaded yet.') }}</p>
+                            {% if can_upload %}
+                                <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">
+                                    {{ _('Upload Your First File') }}
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Chat Sessions -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ _('Recent Chat Sessions') }}</h5>
+                    <a href="{{ url_for('main.chat_sessions') }}" class="btn btn-sm btn-outline-success">{{ _('View All') }}</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                        {% for session in recent_sessions %}
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <i class="fas fa-comments text-success me-3"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ session.session_name or 'Chat Session' }}</h6>
+                                    <small class="text-muted">
+                                        {{ session.excel_file.original_filename }}<br>
+                                        {{ session.last_activity.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                                <a href="{{ url_for('main.chat_session', session_id=session.id) }}" class="btn btn-sm btn-outline-success">
+                                    {{ _('Open') }}
+                                </a>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small">{{ _('No chat sessions yet.') }}</p>
+                            <a href="{{ url_for('main.new_chat_session') }}" class="btn btn-sm btn-success">
+                                {{ _('Start Chatting') }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Subscription Status -->
+            {% if current_user.subscription %}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">{{ _('Subscription Status') }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ _('Plan') }}:</span>
+                            <span class="badge bg-primary">{{ current_user.subscription.plan_type.value.replace('-', ' ').title() }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ _('Status') }}:</span>
+                            <span class="badge bg-{{ 'success' if current_user.subscription.is_active() else 'danger' }}">
+                                {{ current_user.subscription.status.value.title() }}
+                            </span>
+                        </div>
+                        {% if current_user.subscription.current_period_end %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ _('Expires') }}:</span>
+                                <small>{{ current_user.subscription.current_period_end.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh dashboard every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+<!-- Admin sidebar -->
+<div class="list-group mb-4">
+    <div class="list-group-item bg-dark text-white">
+        <h5 class="mb-0">{{ _('Admin Dashboard') }}</h5>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.dashboard' %} active{% endif %}">
+        <i class="fas fa-tachometer-alt me-2"></i> {{ _('Overview') }}
+    </a>
+    <a href="{{ url_for('admin.users') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.users' %} active{% endif %}">
+        <i class="fas fa-users me-2"></i> {{ _('Users') }}
+    </a>
+    <a href="{{ url_for('admin.subscriptions') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.subscriptions' %} active{% endif %}">
+        <i class="fas fa-credit-card me-2"></i> {{ _('Subscriptions') }}
+    </a>
+    <a href="{{ url_for('admin.files') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.files' %} active{% endif %}">
+        <i class="fas fa-file-excel me-2"></i> {{ _('Files') }}
+    </a>
+    <a href="{{ url_for('admin.analytics') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.analytics' %} active{% endif %}">
+        <i class="fas fa-chart-bar me-2"></i> {{ _('Analytics') }}
+    </a>
+    <a href="{{ url_for('admin.description') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.description' %} active{% endif %}">
+        <i class="fas fa-info-circle me-2"></i> {{ _('Description') }}
+    </a>
+    <a href="{{ url_for('admin.system') }}" class="list-group-item list-group-item-action{% if request.endpoint == 'admin.system' %} active{% endif %}">
+        <i class="fas fa-cogs me-2"></i> {{ _('System') }}
+    </a>
+</div>
+
+<!-- Quick actions -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        {{ _('Quick Actions') }}
+    </div>
+    <div class="list-group list-group-flush">
+        <a href="#" onclick="approveAllUsers()" class="list-group-item list-group-item-action">
+            <i class="fas fa-user-check me-2"></i> {{ _('Approve All Users') }}
+        </a>
+        <a href="#" onclick="syncStripeData()" class="list-group-item list-group-item-action">
+            <i class="fas fa-sync me-2"></i> {{ _('Sync Stripe Data') }}
+        </a>
+    </div>
+</div>
+
+<script>
+function approveAllUsers() {
+    if (confirm("{{ _('Are you sure you want to approve all pending users?') }}")) {
+        // В будущем здесь может быть AJAX запрос
+        alert("{{ _('This feature is not yet implemented.') }}");
+    }
+}
+
+function syncStripeData() {
+    if (confirm("{{ _('Are you sure you want to sync Stripe data?') }}")) {
+        // В будущем здесь может быть AJAX запрос
+        alert("{{ _('This feature is not yet implemented.') }}");
+    }
+}
+</script>

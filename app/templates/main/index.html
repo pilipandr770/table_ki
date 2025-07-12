@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Hero Section -->
+            <div class="text-center mb-5">
+                <h1 class="display-4 mb-3">{{ _('Excel Chat Assistant') }}</h1>
+                <p class="lead mb-4">{{ _('Analyze, interact, and collaborate with your Excel files using AI-powered chat assistant. Support for German and Russian languages.') }}</p>
+                
+                {% if not current_user.is_authenticated %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+                            {{ _('Get Started') }}
+                        </a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg px-4">
+                            {{ _('Sign In') }}
+                        </a>
+                    </div>
+                {% else %}
+                    {% if current_user.can_access_system() %}
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">
+                            {{ _('Go to Dashboard') }}
+                        </a>
+                    {% elif not current_user.is_approved %}
+                        <div class="alert alert-warning" role="alert">
+                            <h4 class="alert-heading">{{ _('Account Pending Approval') }}</h4>
+                            <p>{{ _('Your account is currently pending admin approval. You will receive access once an administrator reviews and approves your account.') }}</p>
+                        </div>
+                    {% elif not current_user.subscription or not current_user.subscription.is_active() %}
+                        <div class="alert alert-info" role="alert">
+                            <h4 class="alert-heading">{{ _('Subscription Required') }}</h4>
+                            <p>{{ _('Please subscribe to a plan to access the system.') }}</p>
+                            <a href="{{ url_for('auth.subscribe', user_id=current_user.id) }}" class="btn btn-primary">
+                                {{ _('Choose Plan') }}
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Features Section -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-file-excel fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">{{ _('Excel File Analysis') }}</h5>
+                            <p class="card-text">{{ _('Upload and analyze Excel files with advanced AI-powered insights and data exploration.') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-comments fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">{{ _('Chat Assistant') }}</h5>
+                            <p class="card-text">{{ _('Interact with your data using natural language. Ask questions, get insights, and explore patterns.') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-microphone fa-3x text-info mb-3"></i>
+                            <h5 class="card-title">{{ _('Voice Support') }}</h5>
+                            <p class="card-text">{{ _('Use voice commands to interact with your data. Speak in German, Russian, or English.') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscription Plans -->
+            {% if not current_user.is_authenticated or (current_user.is_authenticated and not current_user.subscription) %}
+                <div class="row g-4 mb-5">
+                    <div class="col-12">
+                        <h2 class="text-center mb-4">{{ _('Choose Your Plan') }}</h2>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-primary">
+                            <div class="card-header bg-primary text-white text-center">
+                                <h4>{{ _('Single Table Plan') }}</h4>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Upload 1 Excel file') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Chat assistant') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Basic analysis') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Voice support') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Multilingual support') }}</li>
+                                </ul>
+                            </div>
+                            <div class="card-footer">
+                                {% if current_user.is_authenticated %}
+                                    <a href="{{ url_for('auth.subscribe', user_id=current_user.id) }}" class="btn btn-primary w-100">
+                                        {{ _('Choose This Plan') }}
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary w-100">
+                                        {{ _('Get Started') }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-success">
+                            <div class="card-header bg-success text-white text-center">
+                                <h4>{{ _('Multi Table Plan') }}</h4>
+                                <span class="badge bg-warning text-dark">{{ _('Popular') }}</span>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Upload up to 10 Excel files') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Advanced chat assistant') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Full analysis suite') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Voice support') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Priority support') }}</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>{{ _('Multilingual support') }}</li>
+                                </ul>
+                            </div>
+                            <div class="card-footer">
+                                {% if current_user.is_authenticated %}
+                                    <a href="{{ url_for('auth.subscribe', user_id=current_user.id) }}" class="btn btn-success w-100">
+                                        {{ _('Choose This Plan') }}
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('auth.register') }}" class="btn btn-success w-100">
+                                        {{ _('Get Started') }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Additional Info -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body text-center">
+                            <h5>{{ _('Why Choose Our Platform?') }}</h5>
+                            <p class="mb-0">{{ _('Secure data handling, multilingual support, advanced AI analysis, and user-friendly interface. Your data never leaves our secure servers.') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ _('Chat Sessions') }}</h4>
+                    <a href="{{ url_for('main.new_chat_session') }}" class="btn btn-light">
+                        <i class="fas fa-plus-circle"></i> {{ _('New Chat') }}
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if sessions %}
+                        <div class="list-group">
+                            {% for session in sessions %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{{ url_for('main.chat_session', session_id=session.id) }}" class="text-decoration-none flex-grow-1">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1">
+                                                {% if session.excel_file %}
+                                                    <i class="fas fa-file-excel text-success me-2"></i>
+                                                    {{ session.excel_file.filename }}
+                                                {% else %}
+                                                    <i class="fas fa-comments text-primary me-2"></i>
+                                                    {{ _('General Chat') }}
+                                                {% endif %}
+                                            </h5>
+                                            <small>{{ session.last_activity.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                        <p class="mb-1 text-truncate">
+                                            {% set messages = session.messages.all() %}
+                                            {% if messages %}
+                                                {% set last_message = messages|sort(attribute='timestamp')|last %}
+                                                {{ last_message.content|truncate(100) }}
+                                            {% else %}
+                                                {{ _('No messages yet') }}
+                                            {% endif %}
+                                        </p>
+                                        <small>{{ session.messages.count() }} {{ _('messages') }}</small>
+                                    </a>
+                                    
+                                    <div class="ms-2">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteChatModal{{ session.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Модальное окно для подтверждения удаления -->
+                            <div class="modal fade" id="deleteChatModal{{ session.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">{{ _('Delete Chat Session') }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>{{ _('Are you sure you want to delete this chat session?') }}</p>
+                                            {% if session.excel_file %}
+                                                <p class="text-muted">
+                                                    <i class="fas fa-file-excel text-success me-2"></i>
+                                                    {{ session.excel_file.filename }}
+                                                </p>
+                                            {% endif %}
+                                            <p class="text-danger">{{ _('This action cannot be undone.') }}</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                                            <a href="{{ url_for('main.delete_chat_session', session_id=session.id) }}" class="btn btn-danger">
+                                                {{ _('Delete') }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>{{ _('No chat sessions yet. Start a new chat to analyze your Excel files!') }}</p>
+                            <a href="{{ url_for('main.new_chat_session') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> {{ _('Start New Chat') }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

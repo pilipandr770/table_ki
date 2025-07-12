@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{{ _('System Settings and Information') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">{{ _('System Information') }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <th>{{ _('Python Version') }}</th>
+                                                <td>{{ system_info.python_version }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Flask Version') }}</th>
+                                                <td>{{ system_info.flask_version }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('SQLAlchemy Version') }}</th>
+                                                <td>{{ system_info.sqlalchemy_version }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Environment') }}</th>
+                                                <td>
+                                                    {% if system_info.env == 'development' %}
+                                                        <span class="badge bg-warning">{{ system_info.env }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ system_info.env }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Debug Mode') }}</th>
+                                                <td>
+                                                    {% if system_info.debug %}
+                                                        <span class="badge bg-danger">{{ _('Enabled') }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ _('Disabled') }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">{{ _('Configuration') }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <th>{{ _('Database URL') }}</th>
+                                                <td>{{ system_info.database_url[:10] ~ '...' if system_info.database_url|length > 10 else system_info.database_url }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Upload Folder') }}</th>
+                                                <td>{{ system_info.upload_folder }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Max Upload Size') }}</th>
+                                                <td>{{ system_info.max_content_length }} MB</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('Secret Key') }}</th>
+                                                <td>
+                                                    {% if system_info.secret_key == 'Configured' %}
+                                                        <span class="badge bg-success">{{ _('Configured') }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">{{ _('Not configured') }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ _('API Integrations') }}</th>
+                                                <td>
+                                                    <span class="badge {% if system_info.stripe_configured %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                                        Stripe
+                                                    </span>
+                                                    <span class="badge {% if system_info.openai_configured %}bg-success{% else %}bg-danger{% endif %}">
+                                                        OpenAI
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">{{ _('System Maintenance') }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h6>{{ _('Cache Management') }}</h6>
+                                                    <p class="small text-muted">{{ _('Clear application caches to resolve potential issues.') }}</p>
+                                                    <a href="#" class="btn btn-warning">
+                                                        <i class="fas fa-broom me-1"></i> {{ _('Clear Cache') }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h6>{{ _('Database Maintenance') }}</h6>
+                                                    <p class="small text-muted">{{ _('Run database maintenance operations.') }}</p>
+                                                    <div class="btn-group">
+                                                        <a href="#" class="btn btn-primary">
+                                                            <i class="fas fa-sync me-1"></i> {{ _('Run Migrations') }}
+                                                        </a>
+                                                        <a href="#" class="btn btn-info">
+                                                            <i class="fas fa-database me-1"></i> {{ _('Vacuum') }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6>{{ _('Log Management') }}</h6>
+                                                    <p class="small text-muted">{{ _('Manage and view system logs.') }}</p>
+                                                    <div class="btn-group">
+                                                        <a href="{{ url_for('admin.logs') }}" class="btn btn-primary">
+                                                            <i class="fas fa-file-alt me-1"></i> {{ _('View Logs') }}
+                                                        </a>
+                                                        <a href="#" class="btn btn-warning">
+                                                            <i class="fas fa-trash me-1"></i> {{ _('Clear Logs') }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6>{{ _('Storage Management') }}</h6>
+                                                    <p class="small text-muted">{{ _('Manage file storage and remove temporary files.') }}</p>
+                                                    <a href="#" class="btn btn-danger">
+                                                        <i class="fas fa-trash-alt me-1"></i> {{ _('Clean Temp Files') }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ _('System maintenance operations should be performed with caution. Please make sure you have backups before proceeding.') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

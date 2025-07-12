@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ excel_file.original_filename }}</h4>
+                    <div>
+                        <a href="{{ url_for('main.download_file', file_id=excel_file.id) }}" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-download"></i> {{ _('Download') }}
+                        </a>
+                        <a href="{{ url_for('main.edit_file', file_id=excel_file.id) }}" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-cog"></i> {{ _('Settings') }}
+                        </a>
+                        <a href="{{ url_for('main.files') }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> {{ _('Back') }}
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- File metadata -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Size') }}:</strong> {{ excel_file.file_size|filesizeformat }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Uploaded') }}:</strong> {{ excel_file.upload_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Rows') }}:</strong> {{ excel_file.row_count }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Columns') }}:</strong> {{ excel_file.column_count }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Sheet selector -->
+                    {% if sheet_names|length > 1 %}
+                    <div class="mb-4">
+                        <label for="sheetSelect" class="form-label">{{ _('Select Sheet') }}:</label>
+                        <select id="sheetSelect" class="form-select">
+                            {% for sheet in sheet_names %}
+                            <option value="{{ sheet }}" {% if current_sheet == sheet %}selected{% endif %}>{{ sheet }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <!-- Excel data display -->
+                    {% if data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for header in data.columns %}
+                                    <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in data.data %}
+                                <tr>
+                                    {% for header in data.columns %}
+                                    <td>{{ row[header] }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        {{ _('Could not load data. Please check if the file is valid.') }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer d-flex justify-content-between">
+                    <div>
+                        <span class="badge bg-{{ 'success' if excel_file.permission_mode.value == 'read_write_delete' else 
+                                       'primary' if excel_file.permission_mode.value == 'read_write' else 
+                                       'secondary' }}">
+                            {{ excel_file.get_permission_mode_display() }}
+                        </span>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('main.new_chat_session') }}?file_id={{ excel_file.id }}" class="btn btn-success btn-sm">
+                            <i class="fas fa-comments"></i> {{ _('Start Chat with this File') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sheetSelect = document.getElementById('sheetSelect');
+        if (sheetSelect) {
+            sheetSelect.addEventListener('change', function() {
+                const selectedSheet = this.value;
+                window.location.href = "{{ url_for('main.view_file', file_id=excel_file.id) }}" + "?sheet=" + encodeURIComponent(selectedSheet);
+            });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

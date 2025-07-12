@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{{ _('Voice Message') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>{{ _('To use voice messaging, please:') }}</p>
+                        <ol>
+                            <li>{{ _('Allow microphone access when your browser asks for permission') }}</li>
+                            <li>{{ _('Click the "Start Recording" button below') }}</li>
+                            <li>{{ _('Speak your message clearly') }}</li>
+                            <li>{{ _('Click "Stop Recording" when finished') }}</li>
+                        </ol>
+                    </div>
+                    
+                    <div id="mic-status" class="alert alert-secondary text-center">
+                        {{ _('Waiting for microphone permission...') }}
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <div id="recording-timer" class="display-4 mb-3">00:00</div>
+                        
+                        <div id="recording-controls">
+                            <button id="request-permission" class="btn btn-lg btn-primary mb-3">
+                                <i class="fas fa-microphone me-2"></i> {{ _('Request Microphone Permission') }}
+                            </button>
+                            
+                            <div class="d-none" id="recording-buttons">
+                                <button id="start-record" class="btn btn-lg btn-success me-2">
+                                    <i class="fas fa-microphone"></i> {{ _('Start Recording') }}
+                                </button>
+                                <button id="stop-record" class="btn btn-lg btn-danger d-none">
+                                    <i class="fas fa-stop"></i> {{ _('Stop Recording') }}
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="processing" class="d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">{{ _('Processing...') }}</span>
+                            </div>
+                            <p>{{ _('Processing your voice message...') }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-none" id="results-section">
+                        <h5>{{ _('Results:') }}</h5>
+                        <div class="card mb-3">
+                            <div class="card-header">{{ _('Your message:') }}</div>
+                            <div class="card-body">
+                                <p id="transcript-text"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">{{ _('Assistant response:') }}</div>
+                            <div class="card-body">
+                                <p id="response-text"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button id="return-to-chat" class="btn btn-primary" data-session-id="{{ session_id }}">
+                                {{ _('Return to Chat') }}
+                            </button>
+                            <button id="new-recording" class="btn btn-outline-secondary">
+                                {{ _('New Recording') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingInterval = null;
+let recordingSeconds = 0;
+let sessionId = "{{ session_id }}";
+
+// Start recording timer
+function startRecordingTimer() {
+    recordingSeconds = 0;
+    updateRecordingTime();
+    recordingInterval = setInterval(() => {
+        recordingSeconds++;
+        updateRecordingTime();
+    }, 1000);
+}
+
+// Stop recording timer
+function stopRecordingTimer() {
+    if (recordingInterval) {
+        clearInterval(recordingInterval);
+        recordingInterval = null;
+    }
+}
+
+// Update recording time display
+function updateRecordingTime() {
+    const minutes = Math.floor(recordingSeconds / 60);
+    const seconds = recordingSeconds % 60;
+    document.getElementById('recording-timer').innerText = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Request permission for microphone
+function requestMicrophonePermission() {
+    console.log('Requesting microphone permission');
+    document.getElementById('mic-status').className = 'alert alert-info text-center';
+    document.getElementById('mic-status').innerText = "{{ _('Requesting microphone access...') }}";
+    
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            console.log('Microphone permission granted');
+            document.getElementById('mic-status').className = 'alert alert-success text-center';
+            document.getElementById('mic-status').innerText = "{{ _('Microphone access granted!') }}";
+            
+            // Hide permission button, show recording controls
+            document.getElementById('request-permission').classList.add('d-none');
+            document.getElementById('recording-buttons').classList.remove('d-none');
+            
+            // Store the stream for later use
+            window.microphoneStream = stream;
+        })
+        .catch(error => {
+            console.error('Error accessing microphone:', error);
+            document.getElementById('mic-status').className = 'alert alert-danger text-center';
+            document.getElementById('mic-status').innerText = "{{ _('Microphone access denied or not available.') }}";
+        });
+}
+
+// Start recording
+function startRecording() {
+    if (!window.microphoneStream) {
+        console.error('No microphone stream available');
+        return;
+    }
+    
+    console.log('Starting recording');
+    audioChunks = [];
+    
+    // Update UI
+    document.getElementById('start-record').classList.add('d-none');
+    document.getElementById('stop-record').classList.remove('d-none');
+    document.getElementById('mic-status').innerText = "{{ _('Recording...') }}";
+    
+    // Start timer
+    startRecordingTimer();
+    
+    // Create media recorder
+    try {
+        mediaRecorder = new MediaRecorder(window.microphoneStream);
+        
+        mediaRecorder.addEventListener('dataavailable', event => {
+            audioChunks.push(event.data);
+        });
+        
+        mediaRecorder.start();
+        console.log('Recording started');
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        document.getElementById('mic-status').className = 'alert alert-danger text-center';
+        document.getElementById('mic-status').innerText = "{{ _('Error starting recording.') }}";
+    }
+}
+
+// Stop recording
+function stopRecording() {
+    if (!mediaRecorder) {
+        console.error('No media recorder available');
+        return;
+    }
+    
+    console.log('Stopping recording');
+    
+    // Update UI
+    document.getElementById('recording-controls').classList.add('d-none');
+    document.getElementById('processing').classList.remove('d-none');
+    document.getElementById('mic-status').innerText = "{{ _('Processing recording...') }}";
+    
+    // Stop timer
+    stopRecordingTimer();
+    
+    // Stop recorder
+    mediaRecorder.addEventListener('stop', () => {
+        sendAudioToServer();
+    });
+    
+    mediaRecorder.stop();
+}
+
+// Send audio to server
+function sendAudioToServer() {
+    console.log('Sending audio to server');
+    
+    // Create audio blob
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    
+    // Check if audio is too short
+    if (audioBlob.size < 1000) {
+        document.getElementById('mic-status').className = 'alert alert-warning text-center';
+        document.getElementById('mic-status').innerText = "{{ _('Recording too short.') }}";
+        resetUI();
+        return;
+    }
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('session_id', sessionId);
+    formData.append('language', document.documentElement.lang || 'en');
+    
+    // Send to server
+    fetch('/api/send_voice_message', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Server response:', data);
+        
+        if (data.error) {
+            document.getElementById('mic-status').className = 'alert alert-danger text-center';
+            document.getElementById('mic-status').innerText = data.error;
+            resetUI();
+            return;
+        }
+        
+        // Show results
+        document.getElementById('processing').classList.add('d-none');
+        document.getElementById('results-section').classList.remove('d-none');
+        document.getElementById('mic-status').className = 'alert alert-success text-center';
+        document.getElementById('mic-status').innerText = "{{ _('Voice message processed successfully!') }}";
+        
+        // Display transcript and response
+        document.getElementById('transcript-text').innerText = data.transcript || '';
+        document.getElementById('response-text').innerText = data.response || '';
+    })
+    .catch(error => {
+        console.error('Error sending audio:', error);
+        document.getElementById('mic-status').className = 'alert alert-danger text-center';
+        document.getElementById('mic-status').innerText = "{{ _('Error sending voice message.') }}";
+        resetUI();
+    });
+}
+
+// Reset UI for new recording
+function resetUI() {
+    document.getElementById('processing').classList.add('d-none');
+    document.getElementById('recording-controls').classList.remove('d-none');
+    document.getElementById('start-record').classList.remove('d-none');
+    document.getElementById('stop-record').classList.add('d-none');
+    document.getElementById('recording-timer').innerText = '00:00';
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners
+    document.getElementById('request-permission').addEventListener('click', requestMicrophonePermission);
+    document.getElementById('start-record').addEventListener('click', startRecording);
+    document.getElementById('stop-record').addEventListener('click', stopRecording);
+    
+    // Return to chat button
+    const returnButton = document.getElementById('return-to-chat');
+    if (returnButton) {
+        returnButton.addEventListener('click', function() {
+            const chatId = this.getAttribute('data-session-id');
+            window.location.href = `/chat/${chatId}`;
+        });
+    }
+    
+    // New recording button
+    const newRecordingButton = document.getElementById('new-recording');
+    if (newRecordingButton) {
+        newRecordingButton.addEventListener('click', function() {
+            document.getElementById('results-section').classList.add('d-none');
+            resetUI();
+        });
+    }
+});
+</script>
+{% endblock %}

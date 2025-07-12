@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ _('User Management') }}</h4>
+                    <button onclick="alert('Export functionality will be available soon!')" class="btn btn-light btn-sm">
+                        <i class="fas fa-download"></i> {{ _('Export Users') }}
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if users %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{{ _('ID') }}</th>
+                                    <th>{{ _('Email') }}</th>
+                                    <th>{{ _('Name') }}</th>
+                                    <th>{{ _('Role') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Joined') }}</th>
+                                    <th>{{ _('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.full_name() }}</td>
+                                    <td>
+                                        {% if user.is_admin() %}
+                                        <span class="badge bg-danger">{{ _('Admin') }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ _('User') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_approved %}
+                                        <span class="badge bg-success">{{ _('Approved') }}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ _('Pending') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('admin.update_user_role', user_id=user.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-user-edit"></i>
+                                            </a>
+                                            {% if not user.is_approved %}
+                                            <a href="{{ url_for('admin.approve_user', user_id=user.id) }}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if not user.is_admin() %}
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ user.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Delete Modal -->
+                                        <div class="modal fade" id="deleteModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">{{ _('Confirm Delete') }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        {{ _('Are you sure you want to delete user') }} {{ user.email }}?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                                                        <a href="{{ url_for('admin.delete_user', user_id=user.id) }}" class="btn btn-danger">{{ _('Delete') }}</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">{{ _('No users found.') }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

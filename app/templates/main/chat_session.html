@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" data-session-id="{{ session.id }}">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ session.session_name }}</h5>
+                    <div>
+                        <span class="badge bg-info">{{ session.excel_file.original_filename }}</span>
+                        <span class="badge bg-secondary">{{ session.messages.count() }} messages</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Chat Messages -->
+                    <div id="chat-messages" class="chat-container">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="d-flex mb-3 {{ 'justify-content-end' if message.is_user_message else 'justify-content-start' }}">
+                                    <div class="p-3 rounded {{ 'bg-primary text-white' if message.is_user_message else 'bg-light text-dark' }}" style="max-width: 70%;">
+                                        {% if message.message_type.value == 'voice' and message.is_user_message %}
+                                            <small><i class="fas fa-microphone me-1"></i>{{ _('Voice Message') }}</small><br>
+                                        {% endif %}
+                                        {{ message.content|nl2br }}
+                                        <br><small class="opacity-75">{{ message.timestamp.strftime('%H:%M') }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted p-4">
+                                <i class="fas fa-comments fa-3x mb-3"></i>
+                                <p>{{ _('Start chatting with your Excel Assistant!') }}</p>
+                                <p class="small">{{ _('Ask questions about your Excel data or use the quick actions on the right.') }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="border-top p-3">
+                        <form id="chat-form" method="POST" action="{{ url_for('api.send_message') }}">
+                            {{ form.hidden_tag() }}
+                            <input type="hidden" name="session_id" value="{{ session.id }}">
+                            <div class="row g-2">
+                                <div class="col">
+                                    {{ form.message(class="form-control", id="message-input", placeholder=_("Type your message..."), rows="2") }}
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-2">
+                                <div class="col">
+                                    {{ form.submit(class="btn btn-primary", id="send-button") }}
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" id="voice-button" class="btn btn-outline-primary">
+                                        <i class="fas fa-microphone"></i> {{ _('Voice') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- File Information -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">{{ _('File Information') }}</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>{{ _('File') }}:</strong> {{ session.excel_file.original_filename }}</p>
+                    <p><strong>{{ _('Size') }}:</strong> {{ session.excel_file.get_file_size_mb() }} MB</p>
+                    <p><strong>{{ _('Permissions') }}:</strong> 
+                        <span class="badge bg-{{ 'success' if session.excel_file.permission_mode.value == 'read_write_delete' else 'warning' if session.excel_file.permission_mode.value == 'read_write' else 'secondary' }}">
+                            {{ session.excel_file.permission_mode.value.replace('_', ' ').title() }}
+                        </span>
+                    </p>
+                    <p><strong>{{ _('Sheets') }}:</strong> {{ session.excel_file.sheet_names.count(',') + 1 if session.excel_file.sheet_names else 0 }}</p>
+                    
+                    <div class="d-grid">
+                        <a href="{{ url_for('main.view_file', file_id=session.excel_file.id) }}" class="btn btn-outline-primary btn-sm">
+                            {{ _('View File') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">{{ _('Quick Actions') }}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-info btn-sm prompt-btn" data-prompt="{{ _('Summarize this data') }}">
+                            {{ _('Summarize Data') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm prompt-btn" data-prompt="{{ _('Find patterns in this data') }}">
+                            {{ _('Find Patterns') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm prompt-btn" data-prompt="{{ _('Create a chart recommendation') }}">
+                            {{ _('Chart Recommendations') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm prompt-btn" data-prompt="{{ _('Identify outliers or anomalies') }}">
+                            {{ _('Find Anomalies') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize chat manager
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionContainer = document.querySelector('[data-session-id]');
+    
+    if (sessionContainer) {
+        const sessionId = sessionContainer.dataset.sessionId;
+        console.log("Chat session initialized with ID:", sessionId);
+        
+        if (typeof ChatManager !== 'undefined' && sessionId) {
+            window.chatManager = new ChatManager(parseInt(sessionId));
+        } else {
+            console.error("ChatManager not available or session ID not found");
+        }
+    } else {
+        console.error("Session container not found");
+    }
+    
+    // Add event listeners for prompt buttons
+    document.querySelectorAll('.prompt-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const prompt = this.dataset.prompt;
+            insertPrompt(prompt);
+        });
+    });
+});
+
+// Quick action prompts
+function insertPrompt(text) {
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.value = text;
+        messageInput.focus();
+    }
+}
+
+// Handle voice button click
+document.getElementById('voice-button').addEventListener('click', function() {
+    const sessionId = document.querySelector('[data-session-id]').dataset.sessionId;
+    window.location.href = `/chat/${sessionId}/voice`;
+});
+</script>
+
+<!-- Voice recording functionality -->
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+{% endblock %}

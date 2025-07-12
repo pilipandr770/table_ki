@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">{{ _('Privacy Policy') }}</h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ _('Effective Date: January 1, 2025') }}</p>
+                    
+                    <h4>{{ _('1. Information We Collect') }}</h4>
+                    <p>{{ _('We collect the following types of information:') }}</p>
+                    <ul>
+                        <li>{{ _('Account information: Email address, name, and password') }}</li>
+                        <li>{{ _('Excel files: Files you upload for analysis') }}</li>
+                        <li>{{ _('Chat data: Messages and interactions with our AI assistant') }}</li>
+                        <li>{{ _('Usage data: How you interact with our platform') }}</li>
+                        <li>{{ _('Payment information: Processed securely through Stripe') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('2. How We Use Your Information') }}</h4>
+                    <p>{{ _('We use your information to:') }}</p>
+                    <ul>
+                        <li>{{ _('Provide our Excel analysis and chat services') }}</li>
+                        <li>{{ _('Process payments and manage subscriptions') }}</li>
+                        <li>{{ _('Improve our services and user experience') }}</li>
+                        <li>{{ _('Communicate with you about your account') }}</li>
+                        <li>{{ _('Ensure security and prevent abuse') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('3. Data Security') }}</h4>
+                    <p>{{ _('We implement appropriate security measures to protect your data:') }}</p>
+                    <ul>
+                        <li>{{ _('All files are stored securely on our servers') }}</li>
+                        <li>{{ _('Data is encrypted in transit and at rest') }}</li>
+                        <li>{{ _('Access is restricted to authorized personnel only') }}</li>
+                        <li>{{ _('Regular security audits and updates') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('4. Data Sharing') }}</h4>
+                    <p>{{ _('We do not sell, trade, or otherwise transfer your personal information to third parties, except:') }}</p>
+                    <ul>
+                        <li>{{ _('With your explicit consent') }}</li>
+                        <li>{{ _('To comply with legal obligations') }}</li>
+                        <li>{{ _('To protect our rights and safety') }}</li>
+                        <li>{{ _('With service providers under confidentiality agreements') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('5. Your Rights') }}</h4>
+                    <p>{{ _('You have the right to:') }}</p>
+                    <ul>
+                        <li>{{ _('Access your personal data') }}</li>
+                        <li>{{ _('Correct inaccurate information') }}</li>
+                        <li>{{ _('Delete your account and data') }}</li>
+                        <li>{{ _('Export your data') }}</li>
+                        <li>{{ _('Withdraw consent at any time') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('6. Data Retention') }}</h4>
+                    <p>{{ _('We retain your data only as long as necessary to provide our services or as required by law. You can request deletion of your account and associated data at any time.') }}</p>
+                    
+                    <h4>{{ _('7. International Transfers') }}</h4>
+                    <p>{{ _('Your data is processed and stored on servers located in secure data centers. We ensure appropriate safeguards are in place for any international data transfers.') }}</p>
+                    
+                    <h4>{{ _('8. Cookies and Tracking') }}</h4>
+                    <p>{{ _('We use cookies and similar technologies to:') }}</p>
+                    <ul>
+                        <li>{{ _('Maintain your login session') }}</li>
+                        <li>{{ _('Remember your language preferences') }}</li>
+                        <li>{{ _('Improve site performance') }}</li>
+                        <li>{{ _('Provide analytics (anonymized)') }}</li>
+                    </ul>
+                    
+                    <h4>{{ _('9. Children\'s Privacy') }}</h4>
+                    <p>{{ _('Our service is not intended for children under 16. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.') }}</p>
+                    
+                    <h4>{{ _('10. Changes to This Policy') }}</h4>
+                    <p>{{ _('We may update this privacy policy from time to time. We will notify you of any material changes by posting the new policy on our website and updating the effective date.') }}</p>
+                    
+                    <h4>{{ _('11. Contact Us') }}</h4>
+                    <p>{{ _('If you have questions about this privacy policy or our data practices, please contact us at:') }}</p>
+                    <ul>
+                        <li>{{ _('Email: privacy@example.com') }}</li>
+                        <li>{{ _('Address: [Your Business Address]') }}</li>
+                    </ul>
+                    
+                    <div class="alert alert-info mt-4">
+                        <h5>{{ _('GDPR Compliance') }}</h5>
+                        <p class="mb-0">{{ _('For users in the European Union, we comply with the General Data Protection Regulation (GDPR). You have additional rights under GDPR, including the right to data portability and the right to lodge a complaint with a supervisory authority.') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

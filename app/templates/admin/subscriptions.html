@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ _('Subscription Management') }}</h4>
+                    <button onclick="alert('Export functionality will be available soon!')" class="btn btn-light btn-sm">
+                        <i class="fas fa-download"></i> {{ _('Export Data') }}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Subscription Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ stats.active }}</h3>
+                                    <p class="mb-0">{{ _('Active Subscriptions') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ stats.canceled }}</h3>
+                                    <p class="mb-0">{{ _('Canceled') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ stats.past_due }}</h3>
+                                    <p class="mb-0">{{ _('Past Due') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ stats.trial }}</h3>
+                                    <p class="mb-0">{{ _('Trial') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscription Table -->
+                    {% if subscriptions %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{{ _('User') }}</th>
+                                    <th>{{ _('Plan') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Start Date') }}</th>
+                                    <th>{{ _('End Date') }}</th>
+                                    <th>{{ _('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sub in subscriptions %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('admin.view_user', user_id=sub.user.id) }}">{{ sub.user.email }}</a>
+                                    </td>
+                                    <td>
+                                        {% if sub.stripe_price_id == current_app.config.get('STRIPE_SINGLE_TABLE_PRICE_ID') %}
+                                        {{ _('Single Table') }}
+                                        {% elif sub.stripe_price_id == current_app.config.get('STRIPE_MULTI_TABLE_PRICE_ID') %}
+                                        {{ _('Multi Table') }}
+                                        {% else %}
+                                        {{ _('Custom Plan') }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sub.status.value == 'active' %}
+                                        <span class="badge bg-success">{{ _('Active') }}</span>
+                                        {% elif sub.status.value == 'canceled' %}
+                                        <span class="badge bg-danger">{{ _('Canceled') }}</span>
+                                        {% elif sub.status.value == 'past_due' %}
+                                        <span class="badge bg-warning">{{ _('Past Due') }}</span>
+                                        {% elif sub.status.value == 'trialing' %}
+                                        <span class="badge bg-info">{{ _('Trial') }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ sub.status.value }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ sub.start_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ sub.end_date.strftime('%Y-%m-%d') if sub.end_date else _('N/A') }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('admin.view_subscription', subscription_id=sub.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ sub.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Edit Modal -->
+                                        <div class="modal fade" id="editModal{{ sub.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">{{ _('Edit Subscription') }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form action="{{ url_for('admin.update_subscription', subscription_id=sub.id) }}" method="post">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                            <div class="mb-3">
+                                                                <label for="status" class="form-label">{{ _('Status') }}</label>
+                                                                <select class="form-select" id="status" name="status">
+                                                                    <option value="active" {% if sub.status.value == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                                                                    <option value="canceled" {% if sub.status.value == 'canceled' %}selected{% endif %}>{{ _('Canceled') }}</option>
+                                                                    <option value="past_due" {% if sub.status.value == 'past_due' %}selected{% endif %}>{{ _('Past Due') }}</option>
+                                                                    <option value="trialing" {% if sub.status.value == 'trialing' %}selected{% endif %}>{{ _('Trial') }}</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+                                                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                                                       value="{{ sub.end_date.strftime('%Y-%m-%d') if sub.end_date else '' }}">
+                                                            </div>
+                                                            <div class="d-grid">
+                                                                <button type="submit" class="btn btn-primary">{{ _('Update') }}</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">{{ _('No subscriptions found.') }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Admin Sidebar -->
+        <div class="col-lg-3">
+            {% include 'admin/sidebar.html' %}
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ _('All Excel Files') }}</h4>
+                    <div>
+                        <a href="#" class="btn btn-sm btn-light">
+                            <i class="fas fa-download me-1"></i> {{ _('Export List') }}
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search and Filter -->
+                    <form class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchInput" placeholder="{{ _('Search by filename or user...') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter">
+                                <option value="">{{ _('All Status') }}</option>
+                                <option value="active">{{ _('Active') }}</option>
+                                <option value="inactive">{{ _('Inactive') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+                            <button type="reset" class="btn btn-outline-secondary">{{ _('Reset') }}</button>
+                        </div>
+                    </form>
+                    
+                    <!-- Files Table -->
+                    {% if files %}
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{{ _('ID') }}</th>
+                                    <th>{{ _('File Name') }}</th>
+                                    <th>{{ _('User') }}</th>
+                                    <th>{{ _('Size') }}</th>
+                                    <th>{{ _('Uploaded') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr>
+                                    <td>{{ file.id }}</td>
+                                    <td>{{ file.filename }}</td>
+                                    <td>{{ file.user.email }}</td>
+                                    <td>{{ (file.file_size / 1024)|round(1) }} KB</td>
+                                    <td>{{ file.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <span class="badge {% if file.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ _('Active') if file.is_active else _('Inactive') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('main.view_file', file_id=file.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('main.download_file', file_id=file.id) }}" class="btn btn-outline-success">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger toggle-status-btn" 
+                                                    data-file-id="{{ file.id }}" data-make-active="{{ '0' if file.is_active else '1' }}">
+                                                <i class="fas fa-{% if file.is_active %}times{% else %}check{% endif %}"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        <!-- Pagination -->
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.files', page=pagination.prev_num) if pagination.has_prev else '#' }}">{{ _('Previous') }}</a>
+                                </li>
+                                {% for page in pagination.iter_pages() %}
+                                    {% if page %}
+                                        <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                                            <a class="page-link" href="{{ url_for('admin.files', page=page) }}">{{ page }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <a class="page-link" href="#">...</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.files', page=pagination.next_num) if pagination.has_next else '#' }}">{{ _('Next') }}</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    {% else %}
+                        <div class="alert alert-info">
+                            {{ _('No files found.') }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to all toggle status buttons
+    document.querySelectorAll('.toggle-status-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var fileId = this.getAttribute('data-file-id');
+            var makeActive = this.getAttribute('data-make-active');
+            
+            if (confirm("{{ _('Are you sure you want to change this file\'s status?') }}")) {
+                // Here you would normally make an AJAX call to update file status
+                // For now, we'll just reload the page with the action
+                window.location.href = "{{ url_for('admin.toggle_file_status', file_id=0) }}".replace('0', fileId) + 
+                                      "?active=" + makeActive;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

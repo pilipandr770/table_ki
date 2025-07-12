@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if title %}{{ title }} - {% endif %}{{ _('Excel Chat Assistant') }}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <i class="fas fa-table me-2"></i>{{ _('Excel Chat Assistant') }}
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated and current_user.can_access_system() %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                                <i class="fas fa-dashboard me-1"></i>{{ _('Dashboard') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.files') }}">
+                                <i class="fas fa-file-excel me-1"></i>{{ _('My Files') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.chat_sessions') }}">
+                                <i class="fas fa-comments me-1"></i>{{ _('Chat Sessions') }}
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-1"></i>{{ _('Admin') }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}">{{ _('Admin Dashboard') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">{{ _('User Management') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.subscriptions') }}">{{ _('Subscriptions') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.analytics') }}">{{ _('Analytics') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.description') }}">{{ _('Description') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.system') }}">{{ _('System') }}</a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <!-- Language Selector -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-globe me-1"></i>
+                            {% if get_locale() == 'de' %}Deutsch{% elif get_locale() == 'ru' %}Русский{% else %}English{% endif %}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="setLanguage('en')">English</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="setLanguage('de')">Deutsch</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="setLanguage('ru')">Русский</a></li>
+                        </ul>
+                    </li>
+                    
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>{{ current_user.first_name }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">{{ _('Profile') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}">{{ _('Change Password') }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">{{ _('Logout') }}</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">{{ _('Login') }}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.register') }}">{{ _('Register') }}</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>{{ _('Excel Chat Assistant') }}</h5>
+                    <p class="small">{{ _('Secure multilingual analysis and interaction with Excel files.') }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>{{ _('Legal') }}</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('main.privacy') }}" class="text-light text-decoration-none">{{ _('Privacy Policy') }}</a></li>
+                        <li><a href="{{ url_for('main.legal') }}" class="text-light text-decoration-none">{{ _('Legal Information') }}</a></li>
+                        <li><a href="{{ url_for('main.contact') }}" class="text-light text-decoration-none">{{ _('Contact Us') }}</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>{{ _('Support') }}</h6>
+                    <p class="small">
+                        {{ _('For technical support or questions, please contact us.') }}<br>
+                        <a href="mailto:support@example.com" class="text-light">support@example.com</a>
+                    </p>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <small>&copy; 2025 Excel Chat Assistant. {{ _('All rights reserved.') }}</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://js.stripe.com/v3/"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if config.get('BYPASS_STRIPE', False) %}
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>{{ _('Development Mode Active') }}</h6>
+                <p class="mb-0">{{ _('Stripe payments are bypassed. Selecting a plan will activate your subscription immediately without payment processing.') }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h4 class="mb-0">{{ _('Choose Your Subscription Plan') }}</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4 mb-4">
+                        {% for plan_key, plan_info in plans.items() %}
+                            <div class="col-md-6">
+                                <div class="card h-100 border-{{ 'success' if plan_key == 'multi-table' else 'primary' }} subscription-plan" 
+                                     data-plan="{{ plan_key }}">
+                                    <div class="card-header bg-{{ 'success' if plan_key == 'multi-table' else 'primary' }} text-white text-center">
+                                        <h5>{{ plan_info.name }}</h5>
+                                        {% if plan_key == 'multi-table' %}
+                                            <span class="badge bg-warning text-dark">{{ _('Popular') }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            {% for feature in plan_info.features %}
+                                                <li class="mb-2">
+                                                    <i class="fas fa-check text-success me-2"></i>{{ _(feature) }}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <div class="card-footer">
+                                        <button type="button" class="btn btn-{{ 'success' if plan_key == 'multi-table' else 'primary' }} w-100 select-plan-btn"
+                                                data-plan="{{ plan_key }}">
+                                            {{ _('Select This Plan') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payment Form -->
+                    <div id="payment-section" style="display: none;">
+                        <hr class="my-4">
+                        <h5>{{ _('Payment Information') }}</h5>
+                        
+                        <form id="payment-form">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Selected Plan') }}</label>
+                                <div id="selected-plan-info" class="alert alert-info"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="card-element" class="form-label">{{ _('Credit or Debit Card') }}</label>
+                                <div id="card-element" class="form-control"></div>
+                                <div id="card-errors" role="alert" class="text-danger mt-2"></div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button id="submit-payment" class="btn btn-success btn-lg">
+                                    <span id="button-text">{{ _('Subscribe Now') }}</span>
+                                    <div id="spinner" class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;"></div>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Pass data to JavaScript -->
+<div style="display: none;"
+     data-stripe-key="{{ config.STRIPE_PUBLISHABLE_KEY }}"
+     data-plans="{{ plans|tojson|e }}"
+     data-user-name="{{ user.get_full_name() }}"
+     data-success-url="{{ url_for('auth.subscription_success', user_id=user.id) }}">
+</div>
+
+<script src="{{ url_for('static', filename='js/stripe-subscription.js') }}"></script>
+{% endblock %}

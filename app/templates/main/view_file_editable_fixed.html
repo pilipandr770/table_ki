@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .editable-cell {
+        cursor: pointer;
+        position: relative;
+    }
+
+    .editable-cell:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+    .cell-editor {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 2px solid #007bff;
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+        z-index: 100;
+    }
+    
+    .delete-row-btn {
+        padding: 0 5px;
+        font-size: 0.8rem;
+    }
+    
+    .table-actions {
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>{{ excel_file.original_filename }}</h4>
+                    <div>
+                        <a href="{{ url_for('main.download_file', file_id=excel_file.id) }}" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-download"></i> {{ _('Download') }}
+                        </a>
+                        <a href="{{ url_for('main.edit_file', file_id=excel_file.id) }}" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-cog"></i> {{ _('Settings') }}
+                        </a>
+                        <a href="{{ url_for('main.files') }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> {{ _('Back') }}
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- File metadata -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Size') }}:</strong> {{ excel_file.file_size|filesizeformat }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Uploaded') }}:</strong> {{ excel_file.upload_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Rows') }}:</strong> {{ excel_file.row_count }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>{{ _('Columns') }}:</strong> {{ excel_file.column_count }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Sheet selector -->
+                    {% if sheet_names|length > 1 %}
+                    <div class="mb-4">
+                        <label for="sheetSelect" class="form-label">{{ _('Select Sheet') }}:</label>
+                        <select id="sheetSelect" class="form-select">
+                            {% for sheet in sheet_names %}
+                            <option value="{{ sheet }}" {% if current_sheet == sheet %}selected{% endif %}>{{ sheet }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    {% if excel_file.can_write() %}
+                    <div class="table-actions">
+                        <button id="addRowBtn" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus"></i> {{ _('Add Row') }}
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <!-- Excel data display -->
+                    {% if data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered" id="excelTable" 
+                               data-file-id="{{ excel_file.id }}" 
+                               data-sheet="{{ current_sheet or '' }}"
+                               data-can-write="{{ excel_file.can_write()|lower }}"
+                               data-can-delete="{{ excel_file.can_delete()|lower }}">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% if excel_file.can_delete() %}
+                                    <th style="width: 50px;">{{ _('Actions') }}</th>
+                                    {% endif %}
+                                    {% for header in data.columns %}
+                                    <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in data.data %}
+                                <tr data-row-index="{{ loop.index0 }}">
+                                    {% if excel_file.can_delete() %}
+                                    <td>
+                                        <button class="btn btn-danger btn-sm delete-row-btn" data-row-index="{{ loop.index0 }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                    {% endif %}
+                                    {% for header in data.columns %}
+                                    <td class="{% if excel_file.can_write() %}editable-cell{% endif %}" data-column="{{ header }}">{{ row[header] }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        {{ _('Could not load data. Please check if the file is valid.') }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer d-flex justify-content-between">
+                    <div>
+                        <span class="badge bg-{{ 'success' if excel_file.permission_mode.value == 'read_write_delete' else 
+                                       'primary' if excel_file.permission_mode.value == 'read_write' else 
+                                       'secondary' }}">
+                            {{ excel_file.get_permission_mode_display() }}
+                        </span>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('main.new_chat_session') }}?file_id={{ excel_file.id }}" class="btn btn-success btn-sm">
+                            <i class="fas fa-comments"></i> {{ _('Start Chat with this File') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Add Row -->
+{% if excel_file.can_write() %}
+<div class="modal fade" id="addRowModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Add New Row') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRowForm">
+                    <div id="newRowFields">
+                        {% if data %}
+                        {% for header in data.columns %}
+                        <div class="mb-3">
+                            <label for="field_{{ header }}" class="form-label">{{ header }}</label>
+                            <input type="text" class="form-control" id="field_{{ header }}" name="{{ header }}">
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" id="confirmAddRow" class="btn btn-primary">{{ _('Add Row') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal for Delete Row Confirmation -->
+{% if excel_file.can_delete() %}
+<div class="modal fade" id="deleteRowModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Delete Row') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ _('Are you sure you want to delete this row? This action cannot be undone.') }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" id="confirmDeleteRow" class="btn btn-danger">{{ _('Delete Row') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Создаем функцию для инициализации всей функциональности таблицы
+function initializeTableFunctions() {
+    // Sheet selector functionality
+    const sheetSelect = document.getElementById('sheetSelect');
+    if (sheetSelect) {
+        sheetSelect.addEventListener('change', function() {
+            const selectedSheet = this.value;
+            window.location.href = "{{ url_for('main.view_file', file_id=excel_file.id) }}" + "?sheet=" + encodeURIComponent(selectedSheet);
+        });
+    }
+    
+    // Получаем таблицу и проверяем права доступа
+    const excelTable = document.getElementById('excelTable');
+    if (!excelTable) return; // Если таблицы нет, выходим
+    
+    const canWrite = excelTable.getAttribute('data-can-write') === 'true';
+    const canDelete = excelTable.getAttribute('data-can-delete') === 'true';
+    
+    // Helper function to show toast notifications
+    function showToast(message, type = 'success') {
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = 9999;
+        
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toastEl);
+        document.body.appendChild(toastContainer);
+        
+        const toast = new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+        
+        toastEl.addEventListener('hidden.bs.toast', function() {
+            document.body.removeChild(toastContainer);
+        });
+    }
+    
+    // Функционал редактирования ячеек (только если есть права на запись)
+    if (canWrite) {
+        const editableCells = document.querySelectorAll('.editable-cell');
+        let activeEditor = null;
+        
+        // Function to create cell editor
+        function createCellEditor(cell, value) {
+            // Remove any existing active editor
+            if (activeEditor) {
+                activeEditor.cell.removeChild(activeEditor.input);
+                activeEditor = null;
+            }
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = value;
+            input.className = 'cell-editor';
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit(cell, input.value);
+                    e.preventDefault();
+                } else if (e.key === 'Escape') {
+                    cancelEdit();
+                    e.preventDefault();
+                }
+            });
+            input.addEventListener('blur', function() {
+                saveEdit(cell, input.value);
+            });
+            
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+            
+            activeEditor = {
+                cell: cell,
+                input: input,
+                originalValue: value
+            };
+        }
+        
+        // Function to cancel edit
+        function cancelEdit() {
+            if (activeEditor) {
+                activeEditor.cell.removeChild(activeEditor.input);
+                activeEditor = null;
+            }
+        }
+        
+        // Function to save cell edit
+        function saveEdit(cell, newValue) {
+            if (!activeEditor) return;
+            
+            const table = document.getElementById('excelTable');
+            const fileId = table.dataset.fileId;
+            const sheet = table.dataset.sheet || null;
+            const rowIndex = parseInt(cell.parentElement.dataset.rowIndex);
+            const column = cell.dataset.column;
+            
+            // Save the new value via API
+            fetch(`/api/excel/${fileId}/cell`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sheet: sheet,
+                    row: rowIndex,
+                    column: column,
+                    value: newValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cell.textContent = newValue;
+                    showToast('Cell updated successfully');
+                } else {
+                    cell.textContent = activeEditor.originalValue;
+                    showToast('Error: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                cell.textContent = activeEditor.originalValue;
+                showToast('Error updating cell', 'danger');
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                if (activeEditor) {
+                    activeEditor.cell.removeChild(activeEditor.input);
+                    activeEditor = null;
+                }
+            });
+        }
+        
+        // Add click event listener to editable cells
+        editableCells.forEach(cell => {
+            cell.addEventListener('click', function() {
+                const value = this.textContent;
+                createCellEditor(this, value);
+            });
+        });
+        
+        // Add Row Functionality
+        const addRowBtn = document.getElementById('addRowBtn');
+        const addRowModal = document.getElementById('addRowModal');
+        const confirmAddRowBtn = document.getElementById('confirmAddRow');
+        
+        if (addRowBtn && addRowModal && confirmAddRowBtn) {
+            const addRowModalObj = new bootstrap.Modal(addRowModal);
+            
+            addRowBtn.addEventListener('click', function() {
+                addRowModalObj.show();
+            });
+            
+            confirmAddRowBtn.addEventListener('click', function() {
+                const formData = {};
+                const inputs = document.querySelectorAll('#addRowForm input');
+                inputs.forEach(input => {
+                    formData[input.name] = input.value;
+                });
+                
+                const table = document.getElementById('excelTable');
+                const fileId = table.dataset.fileId;
+                const sheet = table.dataset.sheet || null;
+                
+                // Add new row via API
+                fetch(`/api/excel/${fileId}/row`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sheet: sheet,
+                        data: formData
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload the page to show updated data
+                        window.location.reload();
+                    } else {
+                        showToast('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error adding row', 'danger');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    addRowModalObj.hide();
+                });
+            });
+        }
+    }
+    
+    // Функционал удаления строк (только если есть права на удаление)
+    if (canDelete) {
+        const deleteRowBtns = document.querySelectorAll('.delete-row-btn');
+        const deleteRowModal = document.getElementById('deleteRowModal');
+        const confirmDeleteRowBtn = document.getElementById('confirmDeleteRow');
+        
+        if (deleteRowBtns.length && deleteRowModal && confirmDeleteRowBtn) {
+            const deleteRowModalObj = new bootstrap.Modal(deleteRowModal);
+            let rowToDelete = null;
+            
+            deleteRowBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    rowToDelete = this.dataset.rowIndex;
+                    deleteRowModalObj.show();
+                });
+            });
+            
+            confirmDeleteRowBtn.addEventListener('click', function() {
+                const table = document.getElementById('excelTable');
+                const fileId = table.dataset.fileId;
+                const sheet = table.dataset.sheet || null;
+                
+                // Delete row via API
+                fetch(`/api/excel/${fileId}/row/${rowToDelete}?sheet=${encodeURIComponent(sheet || '')}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload the page to show updated data
+                        window.location.reload();
+                    } else {
+                        showToast('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error deleting row', 'danger');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    deleteRowModalObj.hide();
+                });
+            });
+        }
+    }
+}
+
+// Запускаем инициализацию после загрузки DOM
+document.addEventListener('DOMContentLoaded', initializeTableFunctions);
+</script>
+{% endblock %}
